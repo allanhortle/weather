@@ -9,10 +9,29 @@ program
   .version('0.0.1')
   .parse(process.argv);
 
+var screen = blessed.screen();
+var loading = blessed.loading({
+    top: 'center',
+    left: 'center',
+    width: '100%',
+    height: '100%',
+    content: 'Loading'
+});
+
+
+screen.append(loading);
+screen.render();
+
+
+
 // console.log(Object.keys(data.observations.data[0]))
 function requestData() {
+    loading.load('Loading');
+    screen.render();
+    
     request('http://www.bom.gov.au/fwo/IDV60901/IDV60901.95936.json')
         .then(request => {
+            loading.stop();
             var data = JSON.parse(request);
             var getData = key => List(data.observations.data).take(100).reverse().map(ii => ii[key]);
             var time = getData('local_date_time').toArray();
@@ -143,7 +162,7 @@ function requestData() {
 requestData();
 
 
-var screen = blessed.screen();
+
 var grid = new contrib.grid({
     rows: 4, 
     cols: 6, 
@@ -152,5 +171,9 @@ var grid = new contrib.grid({
 
 screen.key(['escape', 'q', 'C-c'], function(ch, key) {
     return process.exit(0);
+});
+
+screen.key(['return', 'enter'], function(ch, key) {
+    requestData();
 });
 
