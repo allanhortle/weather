@@ -150,7 +150,8 @@ function requestData() {
                     style: { 
                         line: "magenta"
                     },
-                    label: `Pressure: ${current.press}${current.press_tend}`
+                    label: `Pressure: ${current.press}${current.press_tend}`,
+                    minY: 950
                 }))
                 .setData(setLineData([{key: 'press'}]));
 
