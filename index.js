@@ -109,7 +109,7 @@ function requestData() {
                         line: "yellow"
                     },
                     label: `Temperature: ${current.air_temp}, Feels like: ${current.apparent_t}`,
-                    minY: getData('air_temp').min()
+                    // minY: getData('air_temp').min()
                 }))
                 .setData(setLineData([
                     {
