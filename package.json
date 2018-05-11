@@ -1,16 +1,21 @@
 {
-  "name": "chart",
+  "name": "weather",
   "version": "0.0.0",
   "main": "index.js",
+  "bin": {
+    "weather": "index.js",
+    "ww": "index.js"
+  },
   "author": "Allan Hortle",
   "license": "MIT",
   "dependencies": {
     "blessed": "^0.1.81",
-    "blessed-contrib": "^4.6.5",
+    "blessed-contrib": "^4.8.5",
     "commander": "^2.9.0",
     "csv": "^1.1.0",
     "get-stdin": "^5.0.1",
     "immutable": "^3.8.1",
+    "luxon": "^0.4.0",
     "request-promise": "^4.1.1"
   }
 }

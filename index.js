@@ -1,15 +1,19 @@
+#!/usr/bin/env node
 var blessed = require('blessed');
 var contrib = require('blessed-contrib');
 var program = require('commander');
 var {List} = require('immutable');
 var fs = require('fs');
 var request = require('request-promise');
+var DateTime = require('luxon').DateTime;
 
 program
   .version('0.0.1')
   .parse(process.argv);
 
-var screen = blessed.screen();
+var screen = blessed.screen({
+debug: true
+});
 var loading = blessed.loading({
     top: 'center',
     left: 'center',
@@ -33,7 +37,7 @@ function requestData() {
         .then(request => {
             loading.stop();
             var data = JSON.parse(request);
-            var getData = key => List(data.observations.data).take(100).reverse().map(ii => ii[key]);
+            var getData = key => List(data.observations.data).take(100).reverse().map(ii => +ii[key]);
             var time = getData('local_date_time').toArray();
 
             function setLineData(keys) {
@@ -62,54 +66,56 @@ function requestData() {
             }
 
             var current = data.observations.data[0];
+            screen.debug(DateTime.fromFormat(current.local_date_time_full.toString(), 'yyyyMMddHHmm'))
+            screen.debug(current.local_date_time_full)
 
             var stats = grid
                 .set(0, 0, 2, 1, contrib.table, {
-                    label: 'Current',
-                    keys: true,
+                    label:`${current.name}`,
+                    keys: false,
+                    interactive: false,
                     columnSpacing: 3,
-                    columnWidth: [20, 12]
+                    columnWidth: [16, 12]
                 })
                 .setData({
-                    headers: ['Key', 'Value'],
-                    data: Object.keys(current)
-                        .map(ii => {
-                            return [ii, current[ii] || '']
-                        })
-                        // [
-                        // ['Air Temp', current.air_temp],
-                        // ['Appartent Temp', current.apparent_t],
-                        // ['cloud', current.cloud],
-                        // ['cloud_base_m', current.cloud_base_m || ''],
-                        // ['cloud_oktas', current.cloud_oktas || ''],
-                        // ['cloud_type', current.cloud_type || ''],
-                        // ['cloud_type_id', current.cloud_type_id || ''],
-                        // ['dewpt', current.dewpt || ''],
-                        // ['gust_kmh', current.gust_kmh || ''],
-                        // ['local_date_time', current.local_date_time || ''],
-                        // ['local_date_time_full', current.local_date_time_full || ''],
-                        // ['press', current.press || ''],
-                        // ['press_tend', current.press_tend || ''],
-                        // ['rain_trace', current.rain_trace || ''],
-                        // ['rel_hum', current.rel_hum || ''],
-                        // ['sea_state', current.sea_state || ''],
-                        // ['swell_dir_worded', current.swell_dir_worded || ''],
-                        // ['swell_height', current.swell_height || ''],
-                        // ['swell_period', current.swell_period || ''],
-                        // ['vis_km', current.vis_km || ''],
-                        // ['weather', current.weather || ''],
-                        // ['wind_dir', current.wind_dir || ''],
-                        // ['wind_spd_kmh', current.wind_spd_kmh || '']
-                    // ]
+                    headers: ['', ''],
+                    //data: Object.keys(current).map(ii => [ii, current[ii] || ''])
+                    data: [
+                         ['Issued at', DateTime.fromFormat(current.local_date_time_full.toString(), 'yyyyMMddHHmms').toFormat('MMM d HH:mm')],
+                         ['Temp', current.air_temp],
+                         ['Feels Like', current.apparent_t],
+                         ['Air Pressure', current.press || ''],
+                         ['Pressure Change', current.press_tend || ''],
+                         ['Wind Speed', current.wind_spd_kmh || ''],
+                         ['Wind Gust', current.gust_kmh || ''],
+                         ['Wind Direction', current.wind_dir || ''],
+                         ['Humidity', `${current.rel_hum}%`],
+                         ['Rain since 9am', `${current.rain_trace}mm` || ''],
+                         ['Dew Point', current.dewpt || ''],
+                         //['cloud', current.cloud],
+                         //['cloud_base_m', current.cloud_base_m || ''],
+                         //['cloud_oktas', current.cloud_oktas || ''],
+                         //['cloud_type', current.cloud_type || ''],
+                         //['cloud_type_id', current.cloud_type_id || ''],
+                         //['local_date_time', current.local_date_time || ''],
+                         //['sea_state', current.sea_state || ''],
+                         //['swell_dir_worded', current.swell_dir_worded || ''],
+                         //['swell_height', current.swell_height || ''],
+                         //['swell_period', current.swell_period || ''],
+                         //['vis_km', current.vis_km || ''],
+                         //['weather', current.weather || ''],
+                     ]
                 })
 
             var temperature = grid
                 .set(0, 1, 2, 5, contrib.line, lineStyle({ 
+                    maxY: Math.round(Math.max(getData('air_temp').max(), getData('apparent_t').max())),
                     style: { 
                         line: "yellow"
                     },
                     label: `Temperature: ${current.air_temp}, Feels like: ${current.apparent_t}`,
-                    // minY: getData('air_temp').min()
+                    wholeNumbersOnly: true,
+                    minY: Math.round(Math.min(getData('air_temp').min(), getData('apparent_t').min()))
                 }))
                 .setData(setLineData([
                     {
@@ -130,7 +136,8 @@ function requestData() {
                     },
                     label: `Wind speed: ${current.wind_spd_kmh}km/h, direction: ${current.wind_dir}`,
                     wholeNumbersOnly: true,
-                    minY: getData('wind_spd_kmh').min()
+                    minY: getData('wind_spd_kmh').min(),
+                    maxY: getData('wind_spd_kmh').max()
                 }))
                 .setData(setLineData([{key: 'wind_spd_kmh'}]));
 
@@ -140,8 +147,9 @@ function requestData() {
                         line: "magenta"
                     },
                     label: `Humidity: ${current.rel_hum}%`,
-                    numYLabels: 100,
-                    minY: 0
+                    wholeNumbersOnly: true,
+                    minY: getData('rel_hum').min(),
+                    maxY: 102
                 }))
                 .setData(setLineData([{key: 'rel_hum'}]));
 
@@ -150,17 +158,19 @@ function requestData() {
                     style: { 
                         line: "magenta"
                     },
-                    label: `Pressure: ${current.press}${current.press_tend}`,
-                    minY: 950
+                    label: `Rain since am: ${current.rain_trace}mm`,
+                    wholeNumbersOnly: true,
+                    maxY: getData('rain_trace').max(),
+                    minY: getData('rain_trace').min(),
                 }))
-                .setData(setLineData([{key: 'press'}]));
+                .setData(setLineData([{key: 'rain_trace'}]));
+
 
             screen.render();
 
         })
 }
 
-requestData();
 
 
 
@@ -177,4 +187,5 @@ screen.key(['escape', 'q', 'C-c'], function(ch, key) {
 screen.key(['return', 'enter'], function(ch, key) {
     requestData();
 });
+requestData();
 
