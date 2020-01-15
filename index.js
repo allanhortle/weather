@@ -33,7 +33,7 @@ function requestData() {
     loading.load('Loading');
     screen.render();
     
-    request('http://www.bom.gov.au/fwo/IDV60901/IDV60901.95936.json')
+    request('http://reg.bom.gov.au/fwo/IDV60901/IDV60901.95936.json')
         .then(request => {
             loading.stop();
             var data = JSON.parse(request);
@@ -168,6 +168,11 @@ function requestData() {
 
             screen.render();
 
+        })
+        .catch(e => {
+            console.log(e.message);
+            loading.stop();
+            screen.render();
         })
 }
 

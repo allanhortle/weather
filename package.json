@@ -16,6 +16,7 @@
     "get-stdin": "^5.0.1",
     "immutable": "^3.8.1",
     "luxon": "^0.4.0",
+    "request": "^2.88.0",
     "request-promise": "^4.1.1"
   }
 }
